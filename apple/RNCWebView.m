@@ -185,6 +185,38 @@ static NSDictionary* customCertificatesForHost;
   [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
+static id __contentRuleList=nil;
+
++ (void)setupContentRules
+{
+    if (@available(iOS 11.0, *)) {
+        static dispatch_once_t onceToken;
+        dispatch_once(&onceToken, ^{
+
+            NSString *jsonString = @"[{ \
+                \"trigger\": { \"url-filter\" : \".*\" }, \
+                \"action\": { \"type\" : \"block\" } \
+            }]";
+
+            [[WKContentRuleListStore defaultStore]
+                compileContentRuleListForIdentifier:@"ContentRules" encodedContentRuleList:jsonString
+                completionHandler:^(WKContentRuleList *contentRuleList, NSError *error) {
+                if (error == nil) {
+                    __contentRuleList = contentRuleList;
+                } else {
+                    NSLog(@"compileContentRuleListForIdentifier Error == %@",[error description]);
+                }
+            }];
+            
+        });
+    }
+}
+
++ (void)initialize
+{
+    [self setupContentRules];
+}
+
 /**
  * See https://stackoverflow.com/questions/25713069/why-is-wkwebview-not-opening-links-with-target-blank/25853806#25853806 for details.
  */
@@ -230,6 +262,10 @@ static NSDictionary* customCertificatesForHost;
   [wkWebViewConfig.userContentController addScriptMessageHandler:[[RNCWeakScriptMessageDelegate alloc] initWithDelegate:self]
                                                             name:HistoryShimName];
   [self resetupScripts:wkWebViewConfig];
+
+  if (_addContentRuleList && __contentRuleList != nil) {
+      [wkWebViewConfig.userContentController addContentRuleList:__contentRuleList];
+  }
 
 #if !TARGET_OS_OSX
   wkWebViewConfig.allowsInlineMediaPlayback = _allowsInlineMediaPlayback;
