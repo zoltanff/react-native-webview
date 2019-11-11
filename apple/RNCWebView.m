@@ -499,6 +499,16 @@ static NSDictionary* customCertificatesForHost;
         [_webView loadHTMLString:html baseURL:baseURL];
         return;
     }
+      
+    // Use mimeType hint if available
+    NSString *mimeType = [RCTConvert NSString:_source[@"mimeType"]];
+    if (mimeType) {
+      // https://encoding.spec.whatwg.org/#names-and-labels
+      // Potential problem here because the character encoding is not provided in _source
+      NSString *filePath = [RCTConvert NSString:_source[@"filePath"]];
+      [_webView loadData:[NSData dataWithContentsOfFile:filePath] MIMEType:mimeType characterEncodingName:@"utf8" baseURL:[NSURL URLWithString:@"about:blank"]];
+      return;
+    }
 
     NSURLRequest *request = [self requestForSource:_source];
     // Because of the way React works, as pages redirect, we actually end up
