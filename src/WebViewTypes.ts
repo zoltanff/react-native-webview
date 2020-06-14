@@ -310,6 +310,7 @@ export interface IOSNativeWebViewProps extends CommonNativeWebViewProps {
   injectedJavaScriptForMainFrameOnly?: boolean;
   injectedJavaScriptBeforeContentLoadedForMainFrameOnly?: boolean;
   onFileDownload?: (event: FileDownloadEvent) => void;
+  onStartExtract?: () => void;
 }
 
 export interface MacOSNativeWebViewProps extends CommonNativeWebViewProps {
@@ -538,6 +539,11 @@ export interface IOSWebViewProps extends WebViewSharedProps {
    * If not provided, the default is to let the webview try to render the file.
    */
   onFileDownload?: (event: FileDownloadEvent) => void;
+
+  /**
+  */
+  onStartExtract?: () => void;
+  
 }
 
 export interface MacOSWebViewProps extends WebViewSharedProps {

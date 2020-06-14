@@ -62,6 +62,10 @@ static NSDictionary* customCertificatesForHost;
 @end
 #endif // TARGET_OS_OSX
 
+@interface _ExtendedView : WKWebView
+@property RNCWebView *extractDelegate;
+@end
+
 @interface RNCWebView () <WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler,
 #if !TARGET_OS_OSX
     UIScrollViewDelegate,
@@ -78,14 +82,36 @@ static NSDictionary* customCertificatesForHost;
 @property (nonatomic, copy) RCTDirectEventBlock onMessage;
 @property (nonatomic, copy) RCTDirectEventBlock onScroll;
 @property (nonatomic, copy) RCTDirectEventBlock onContentProcessDidTerminate;
+@property (nonatomic, copy) RCTDirectEventBlock onStartExtract;
 #if !TARGET_OS_OSX
-@property (nonatomic, copy) WKWebView *webView;
+@property (nonatomic, copy) _ExtendedView *webView;
 #else
 @property (nonatomic, copy) RNCWKWebView *webView;
 #endif // !TARGET_OS_OSX
 @property (nonatomic, strong) WKUserScript *postMessageScript;
 @property (nonatomic, strong) WKUserScript *atStartScript;
 @property (nonatomic, strong) WKUserScript *atEndScript;
+@end
+
+@implementation _ExtendedView
++ (void)load
+{
+  UIMenuItem *item = [[UIMenuItem alloc] initWithTitle:@"Extract" action:@selector(menuItemAction:)];
+  [[UIMenuController sharedMenuController] setMenuItems:@[item]];
+}
+- (BOOL)canPerformAction:(SEL)action withSender:(id)sender
+{
+  if (_extractDelegate && action == @selector(menuItemAction:)) {
+    return _extractDelegate.onStartExtract != nil;
+  }
+  return [super canPerformAction:action withSender:sender];
+}
+- (void)menuItemAction:(id)sender
+{
+  if (_extractDelegate && _extractDelegate.onStartExtract) {
+    _extractDelegate.onStartExtract(@{});
+  }
+}
 @end
 
 @implementation RNCWebView
@@ -291,7 +317,7 @@ static id __contentRuleList=nil;
   if (self.window != nil && _webView == nil) {
     WKWebViewConfiguration *wkWebViewConfig = [self setUpWkWebViewConfig];
 #if !TARGET_OS_OSX
-    _webView = [[WKWebView alloc] initWithFrame:self.bounds configuration: wkWebViewConfig];
+    _webView = [[_ExtendedView alloc] initWithFrame:self.bounds configuration: wkWebViewConfig];
 #else
     _webView = [[RNCWKWebView alloc] initWithFrame:self.bounds configuration: wkWebViewConfig];
 #endif // !TARGET_OS_OSX
@@ -301,6 +327,7 @@ static id __contentRuleList=nil;
     _webView.scrollView.delegate = self;
 #endif // !TARGET_OS_OSX
     _webView.UIDelegate = self;
+    _webView.extractDelegate = self;
     _webView.navigationDelegate = self;
 #if !TARGET_OS_OSX
     _webView.scrollView.scrollEnabled = _scrollEnabled;
